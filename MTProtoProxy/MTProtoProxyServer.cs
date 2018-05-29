@@ -16,7 +16,8 @@ namespace MTProtoProxy
         private readonly int _port;
         private readonly string _ip;
         private int _backLog;
-        private SocketListener _socketListener;
+        //private SocketListener _socketListener;
+        private Socket _listenSocket;
         private readonly object _lockListener = new object();
         private readonly object _lockConnection = new object();
         private readonly List<MTProtoSocket> _protoSockets = new List<MTProtoSocket>();
@@ -33,7 +34,7 @@ namespace MTProtoProxy
         {
             ThrowIfDisposed();
             _backLog = backLog;
-            _socketListener = new SocketListener();
+            //_socketListener = new SocketListener();
             IPAddress ipAddress = null;
             if (_ip == "default")
             {
@@ -46,65 +47,105 @@ namespace MTProtoProxy
                     throw new Exception("ipAddress is not valid");
                 }
             }
-            var ipEndPoint = new IPEndPoint(ipAddress, _port);
-            if (_socketListener.StartListen(ipEndPoint, _backLog))
+            try
             {
-                StartListener();
-                TgSockets.StartAsync();
+                var ipEndPoint = new IPEndPoint(ipAddress, _port);
+                _listenSocket = new Socket(ipEndPoint.AddressFamily, SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
+                _listenSocket.Bind(ipEndPoint);
+                _listenSocket.Listen(100);
+                StartAsyncListen();
+                //TgSockets.StartAsync();
             }
+            catch(Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+            //if (_socketListener.StartListen(ipEndPoint, _backLog))
+            //{
+            //    StartListener();
+            //    TgSockets.StartAsync();
+            //}
         }
 
-        private Task StartListener()
+
+        private void StartAsyncListen()
         {
-            return Task.Run(() =>
+            _listenSocket.BeginAccept((ar) =>
             {
-                while (true)
-                {
-                    try
-                    {
-                        var socket = _socketListener.Accept();
-                        SocketAccepted(socket);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        break;
-                    }
-                }
-            });
+                Socket newsocket = _listenSocket.EndAccept(ar);
+                StartAsyncListen();
+                SocketAccepted(newsocket);
+            }, null);
         }
+
+        //private Task StartListener()
+        //{
+        //    return Task.Run(() =>
+        //    {
+        //        while (true)
+        //        {
+        //            try
+        //            {
+        //                var socket = _socketListener.Accept();
+        //                SocketAccepted(socket);
+        //            }
+        //            catch (Exception e)
+        //            {
+        //                Console.WriteLine(e);
+        //                break;
+        //            }
+        //        }
+        //    });
+        //}
         private void SocketAccepted(Socket socket)
         {
             try
             {
                 Console.WriteLine("A new connection was created");
                 var buffer = new byte[64];
-                var result = socket.Receive(buffer);
-                if (result == 64)
-                {
-                    var mtpSocket = new MTProtoSocket(socket);
-                    //mtpSocket.MTProtoSocketDisconnected += MTProtoSocketDisconnected;
-                    mtpSocket.StartAsync(buffer, _secret);
-                    lock (_lockConnection)
-                    {
-                        _protoSockets.Add(mtpSocket);
-                    }
-                }
-                else
-                {
-                    socket.Dispose();
-                    socket = null;
-                }
-                lock (_lockConnection)
-                {
-                    var endPointsCount = _protoSockets.Select(x => x.IPEndPoint.Address).Distinct().Count();
-                    Console.WriteLine("Number of users(Ips):{0}", endPointsCount);
-                    Console.WriteLine("Number of connections:{0}", _protoSockets.Count());
-                }
+                //var result = socket.Receive(buffer);
+                socket.BeginReceive(buffer, 0, buffer.Length, 0, OnClientSocketRecive, new object[] {socket, buffer, 0});
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
+            }
+        }
+
+        private void OnClientSocketRecive(IAsyncResult ar)
+        {
+
+            object[] container = (object[])ar.AsyncState;
+            Socket socket = (Socket)container[0];
+            byte[] buffer = (byte[])container[1];
+            int recived_bytes = (int)container[2];
+            try
+            {
+                int bytes = socket.EndReceive(ar);
+                if (bytes == 0)
+                {
+                    socket.Shutdown(SocketShutdown.Send);
+                    Console.WriteLine("client is closed!!!!!!!" + " socket" + socket.GetHashCode());
+                    return;
+                }
+                recived_bytes += bytes;
+                if (recived_bytes == 64)
+                {
+                    var mtpSocket = new MTProtoSocket(socket);
+                    mtpSocket.StartAsync(buffer, _secret);
+                    Console.WriteLine("start a new session!!");
+                }
+                else
+                {
+                    //socket.Shutdown(SocketShutdown.Both);
+                    //socket.Close();
+                    Console.WriteLine("not enough 64 bytes! just " + recived_bytes + " socket" + socket.GetHashCode() + "  " + buffer.Length);
+                    socket.BeginReceive(buffer, recived_bytes, buffer.Length - recived_bytes, 0, OnClientSocketRecive, new object[] { socket, buffer, recived_bytes });
+                }
+            }
+            catch
+            {
+                socket.Shutdown(SocketShutdown.Both);
             }
         }
         //private void MTProtoSocketDisconnected(object sender, EventArgs e)
@@ -137,13 +178,13 @@ namespace MTProtoProxy
                     {
                         return;
                     }
-                    _socketListener.Stop();
+                    //_socketListener.Stop();
+                    _listenSocket.Close();
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
                 }
-                _socketListener = null;
                 lock (_lockConnection)
                 {
                     foreach (var mtp in _protoSockets)

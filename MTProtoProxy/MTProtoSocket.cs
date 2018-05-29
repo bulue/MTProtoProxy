@@ -55,11 +55,8 @@ namespace MTProtoProxy
                         int bytes = _tgSocket.EndSend(ar);
                         if (bytes > 0)
                         {
-
-                            //StartTGListener();
                             StartTGSocketRecive();
                             StartClientSocketRecive();
-                            //StartAsyncClientListener();
                         }
                         else
                         {
@@ -72,11 +69,6 @@ namespace MTProtoProxy
                         Close();
                     }
                 }, null);
-                //_tgSocket.Send(randomBuffer);
-
-                //Array.Clear(randomBuffer, 0, randomBuffer.Length);
-                //StartTGListener();
-                //StartClientListener();
             }
             else
             {
