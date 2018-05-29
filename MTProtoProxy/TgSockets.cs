@@ -75,6 +75,7 @@ namespace MTProtoProxy
                     return socket;
                 }
             }
+            Console.WriteLine("这儿没有好方法来做这件事!");
             var ip1 = _ipServersConfig[dcId - 1];
             var ipAddress = IPAddress.Parse(ip1);
             var endPoint = new IPEndPoint(ipAddress, Constants.TelegramPort);

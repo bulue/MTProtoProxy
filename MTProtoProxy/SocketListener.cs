@@ -7,7 +7,7 @@ namespace MTProtoProxy
     internal class SocketListener
     {
         private Socket _listenSocket;
-        public void StartListen(in IPEndPoint ipEndPoint, in int backlog)
+        public bool StartListen(in IPEndPoint ipEndPoint, in int backlog)
         {
             var socket = new Socket(ipEndPoint.AddressFamily, SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
 
@@ -16,12 +16,14 @@ namespace MTProtoProxy
                 socket.Bind(ipEndPoint);
                 socket.Listen(int.MaxValue);
                 _listenSocket = socket;
+                return true;
             }
             catch (Exception e)
             {
                 socket.Dispose();
                 Console.WriteLine(e);
             }
+            return false;
         }
 
         public Socket Accept()

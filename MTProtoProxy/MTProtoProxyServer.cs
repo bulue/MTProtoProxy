@@ -47,10 +47,13 @@ namespace MTProtoProxy
                 }
             }
             var ipEndPoint = new IPEndPoint(ipAddress, _port);
-            _socketListener.StartListen(ipEndPoint, _backLog);
-            StartListener();
-            TgSockets.StartAsync();
+            if (_socketListener.StartListen(ipEndPoint, _backLog))
+            {
+                StartListener();
+                TgSockets.StartAsync();
+            }
         }
+
         private Task StartListener()
         {
             return Task.Run(() =>
@@ -65,22 +68,7 @@ namespace MTProtoProxy
                     catch (Exception e)
                     {
                         Console.WriteLine(e);
-                        lock (_lockListener)
-                        {
-                            if (!_isDisposed)
-                            {
-                                try
-                                {
-                                    _socketListener.Stop();
-                                    _socketListener = null;
-                                    Start(_backLog);
-                                }
-                                catch (Exception ex)
-                                {
-                                    Console.WriteLine(ex);
-                                }
-                            }
-                        }
+                        break;
                     }
                 }
             });
@@ -95,7 +83,7 @@ namespace MTProtoProxy
                 if (result == 64)
                 {
                     var mtpSocket = new MTProtoSocket(socket);
-                    mtpSocket.MTProtoSocketDisconnected += MTProtoSocketDisconnected;
+                    //mtpSocket.MTProtoSocketDisconnected += MTProtoSocketDisconnected;
                     mtpSocket.StartAsync(buffer, _secret);
                     lock (_lockConnection)
                     {
@@ -113,25 +101,21 @@ namespace MTProtoProxy
                     Console.WriteLine("Number of users(Ips):{0}", endPointsCount);
                     Console.WriteLine("Number of connections:{0}", _protoSockets.Count());
                 }
-                Array.Clear(buffer, 0, buffer.Length);
-                buffer = null;
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
             }
         }
-        private void MTProtoSocketDisconnected(object sender, EventArgs e)
-        {
-            var mtp = (MTProtoSocket)sender;
-            mtp.Dispose();
-            lock (_lockConnection)
-            {
-                _protoSockets.Remove(mtp);
-            }
-        }
+        //private void MTProtoSocketDisconnected(object sender, EventArgs e)
+        //{
+        //    var mtp = (MTProtoSocket)sender;
+        //    mtp.Dispose();
+        //    lock (_lockConnection)
+        //    {
+        //        _protoSockets.Remove(mtp);
+        //    }
+        //}
         public void Dispose()
         {
             Dispose(true);
@@ -166,7 +150,7 @@ namespace MTProtoProxy
                     {
                         try
                         {
-                            mtp.Dispose();
+                            mtp.Close();
                         }
                         catch (Exception e)
                         {
