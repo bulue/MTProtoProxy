@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace MTProtoProxy
 {
-    public class MTProtoProxyServer : IDisposable
+    public class MTProtoProxyServer
     {
         public string Secret { get => _secret; }
         public int Port { get => _port; }
@@ -54,17 +54,11 @@ namespace MTProtoProxy
                 _listenSocket.Bind(ipEndPoint);
                 _listenSocket.Listen(100);
                 StartAsyncListen();
-                //TgSockets.StartAsync();
             }
             catch(Exception e)
             {
                 Console.WriteLine(e.ToString());
             }
-            //if (_socketListener.StartListen(ipEndPoint, _backLog))
-            //{
-            //    StartListener();
-            //    TgSockets.StartAsync();
-            //}
         }
 
 
@@ -78,32 +72,12 @@ namespace MTProtoProxy
             }, null);
         }
 
-        //private Task StartListener()
-        //{
-        //    return Task.Run(() =>
-        //    {
-        //        while (true)
-        //        {
-        //            try
-        //            {
-        //                var socket = _socketListener.Accept();
-        //                SocketAccepted(socket);
-        //            }
-        //            catch (Exception e)
-        //            {
-        //                Console.WriteLine(e);
-        //                break;
-        //            }
-        //        }
-        //    });
-        //}
         private void SocketAccepted(Socket socket)
         {
             try
             {
                 Console.WriteLine("A new connection was created");
                 var buffer = new byte[64];
-                //var result = socket.Receive(buffer);
                 socket.BeginReceive(buffer, 0, buffer.Length, 0, OnClientSocketRecive, new object[] {socket, buffer, 0});
             }
             catch (Exception e)
@@ -147,20 +121,6 @@ namespace MTProtoProxy
             {
                 socket.Shutdown(SocketShutdown.Both);
             }
-        }
-        //private void MTProtoSocketDisconnected(object sender, EventArgs e)
-        //{
-        //    var mtp = (MTProtoSocket)sender;
-        //    mtp.Dispose();
-        //    lock (_lockConnection)
-        //    {
-        //        _protoSockets.Remove(mtp);
-        //    }
-        //}
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
         }
         protected virtual void Dispose(in bool isDisposing)
         {

@@ -28,6 +28,11 @@ namespace MTProtoProxy
             _mtprotoPacketClientSocket = new MTProtoPacket();
             _ipEndPoint = (IPEndPoint)_clientSocket.RemoteEndPoint;
         }
+
+        //public void StartAsync(in string secret)
+        //{
+        //    _tgSocket = new Socket(endPoint.AddressFamily, SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
+        //}
         public void StartAsync(in byte[] buffer, in string secret)
         {
             if (_closed) return;
@@ -43,36 +48,71 @@ namespace MTProtoProxy
             }
             var dcId = Math.Abs(BitConverter.ToInt16(buffer.SubArray(60, 2), 0));
 
-            _tgSocket = TgSockets.GetSocket(dcId);
+            var endPoint = TgSockets.GetTgServerIp(dcId);
+            _tgSocket = new Socket(endPoint.AddressFamily, SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
+            _tgSocket.BeginConnect(endPoint, TgSocketConnectCallback, null);
 
-            if (_tgSocket != null)
+            //_tgSocket = TgSockets.GetSocket(dcId);
+            //_tgSocket = (Socket)xxx.AsyncState;
+            //_tgSocket.EndConnect(xxx);
+
+            //Console.WriteLine("原来这样真的可以的！！");
+
+        }
+
+
+        void TgSocketConnectCallback(IAsyncResult aret)
+        {
+            if (_closed) return;
+            try
             {
+                _tgSocket.EndConnect(aret);
+                //StartTGSocketRecive();
+                //StartClientSocketRecive();
+                Console.WriteLine("真的开始 接收信息了!!");
                 var randomBuffer = _mtprotoPacketTgSocket.GetInitBufferObfuscated2(_mtprotoPacketClientSocket.ProtocolType);
-                _tgSocket.BeginSend(randomBuffer, 0, randomBuffer.Length, SocketFlags.None, (ar) =>
-                {
-                    try
-                    {
-                        int bytes = _tgSocket.EndSend(ar);
-                        if (bytes > 0)
-                        {
-                            StartTGSocketRecive();
-                            StartClientSocketRecive();
-                        }
-                        else
-                        {
-                            Close();
-                        }
-                    }
-                    catch(Exception e)
-                    {
-                        Console.WriteLine(e.ToString());
-                        Close();
-                    }
-                }, null);
+                //AsyncSendToTgSocket(randomBuffer, randomBuffer.Length);
+                _tgSocket.BeginSend(randomBuffer, 0, randomBuffer.Length, 0, TgSocketHandleShakeCallback, new object[] { randomBuffer, 0 });
             }
-            else
+            catch(Exception e)
             {
+                Console.WriteLine(e.ToString());
                 Close();
+            }
+        }
+
+        void TgSocketHandleShakeCallback(IAsyncResult ar)
+        {
+            if (_closed) return;
+            try
+            {
+                int bytes = _tgSocket.EndSend(ar);
+                object[] container = (object[])ar.AsyncState;
+                byte[] sendbuffer = (byte[])container[0];
+                int allsendbytes = (int)container[1];
+                if (bytes > 0)
+                {
+                    allsendbytes += bytes;
+                    if (allsendbytes == sendbuffer.Length)
+                    {
+                        StartClientSocketRecive();
+                        StartTGSocketRecive();
+                        Console.WriteLine("handle shake with tg server is suceess!");
+                    }
+                    else
+                    {
+                        _tgSocket.BeginSend(sendbuffer, allsendbytes, sendbuffer.Length - allsendbytes, 0, TgSocketHandleShakeCallback, new object[] { sendbuffer, allsendbytes });
+                    }
+                }
+                else
+                {
+                    _clientSocket.Shutdown(SocketShutdown.Send);
+                    Console.WriteLine("tg socket send first 64 bytes faild!");
+                }
+            }
+            catch(Exception e)
+            {
+
             }
         }
 
@@ -83,8 +123,9 @@ namespace MTProtoProxy
             {
                 _tgSocket.BeginReceive(_tgSocketRecive, 0, _tgSocketRecive.Length, SocketFlags.None, TGSocketReciveCallback, null);
             }
-            catch
+            catch(Exception e)
             {
+                Console.WriteLine(e.ToString());
                 Close();
             }
         }
@@ -163,8 +204,9 @@ namespace MTProtoProxy
             {
                 _clientSocket.BeginReceive(_clientSocketRecive, 0, _clientSocketRecive.Length, 0, ClientSocketReciveCallback, null);
             }
-            catch
+            catch(Exception e)
             {
+                Console.WriteLine(e);
                 Close();
             }
         }
@@ -231,8 +273,9 @@ namespace MTProtoProxy
                     StartClientSocketRecive();
                 }
             }
-            catch
+            catch(Exception e)
             {
+                Console.WriteLine(e);
                 Close();
             }
         }
