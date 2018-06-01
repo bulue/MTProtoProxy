@@ -64,12 +64,19 @@ namespace MTProtoProxy
 
         private void StartAsyncListen()
         {
-            _listenSocket.BeginAccept((ar) =>
+            try
             {
-                Socket newsocket = _listenSocket.EndAccept(ar);
-                StartAsyncListen();
-                SocketAccepted(newsocket);
-            }, null);
+                _listenSocket.BeginAccept((ar) =>
+                {
+                    Socket newsocket = _listenSocket.EndAccept(ar);
+                    StartAsyncListen();
+                    SocketAccepted(newsocket);
+                }, null);
+            }
+            catch(Exception e)
+            {
+                Logging.Error(e.ToString());
+            }
         }
 
         private void SocketAccepted(Socket socket)
@@ -82,7 +89,9 @@ namespace MTProtoProxy
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Logging.Error(e.ToString());
+                socket.Shutdown(SocketShutdown.Both);
+                socket.Close();
             }
         }
 
@@ -98,7 +107,8 @@ namespace MTProtoProxy
                 int bytes = socket.EndReceive(ar);
                 if (bytes == 0)
                 {
-                    socket.Shutdown(SocketShutdown.Send);
+                    socket.Shutdown(SocketShutdown.Both);
+                    socket.Close();
                     Console.WriteLine("client is closed!!!!!!!" + " socket" + socket.GetHashCode());
                     return;
                 }
@@ -113,13 +123,17 @@ namespace MTProtoProxy
                 {
                     //socket.Shutdown(SocketShutdown.Both);
                     //socket.Close();
+                    socket.Shutdown(SocketShutdown.Both);
+                    socket.Close();
                     Console.WriteLine("not enough 64 bytes! just " + recived_bytes + " socket" + socket.GetHashCode() + "  " + buffer.Length);
-                    socket.BeginReceive(buffer, recived_bytes, buffer.Length - recived_bytes, 0, OnClientSocketRecive, new object[] { socket, buffer, recived_bytes });
+                    //socket.BeginReceive(buffer, recived_bytes, buffer.Length - recived_bytes, 0, OnClientSocketRecive, new object[] { socket, buffer, recived_bytes });
                 }
             }
-            catch
+            catch(Exception e)
             {
                 socket.Shutdown(SocketShutdown.Both);
+                socket.Close();
+                Logging.Error(e.ToString());
             }
         }
         protected virtual void Dispose(in bool isDisposing)

@@ -67,9 +67,6 @@ namespace MTProtoProxy
             try
             {
                 _tgSocket.EndConnect(aret);
-                //StartTGSocketRecive();
-                //StartClientSocketRecive();
-                Console.WriteLine("真的开始 接收信息了!!");
                 var randomBuffer = _mtprotoPacketTgSocket.GetInitBufferObfuscated2(_mtprotoPacketClientSocket.ProtocolType);
                 //AsyncSendToTgSocket(randomBuffer, randomBuffer.Length);
                 _tgSocket.BeginSend(randomBuffer, 0, randomBuffer.Length, 0, TgSocketHandleShakeCallback, new object[] { randomBuffer, 0 });
@@ -101,6 +98,7 @@ namespace MTProtoProxy
                     }
                     else
                     {
+                        Logging.Debug("need to resent " + (sendbuffer.Length - allsendbytes) + "bytes");
                         _tgSocket.BeginSend(sendbuffer, allsendbytes, sendbuffer.Length - allsendbytes, 0, TgSocketHandleShakeCallback, new object[] { sendbuffer, allsendbytes });
                     }
                 }
@@ -112,7 +110,8 @@ namespace MTProtoProxy
             }
             catch(Exception e)
             {
-
+                Logging.Error(e.ToString());
+                Close();
             }
         }
 
@@ -148,22 +147,24 @@ namespace MTProtoProxy
 
                 AsyncSendToClientSocket(encrypt, encrypt.Length);
             }
-            catch
+            catch(Exception e)
             {
                 Close();
+                Logging.Error(e.ToString());
             }
         }
 
 
         public void AsyncSendToClientSocket(in byte[] buffer, in int length)
         {
+            if (_closed) return;
             try
             {
                 _clientSocket.BeginSend(buffer, 0, buffer.Length, SocketFlags.None, ClientSocketSendCallBack, new object[] {buffer, length });
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Logging.Error(e.ToString());
                 Close();
             }
         }
@@ -206,7 +207,7 @@ namespace MTProtoProxy
             }
             catch(Exception e)
             {
-                Console.WriteLine(e);
+                Logging.Error(e.ToString());
                 Close();
             }
         }
@@ -231,7 +232,7 @@ namespace MTProtoProxy
             }
             catch(Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Logging.Error(e.ToString());
                 Close();
             }
         }
@@ -245,7 +246,7 @@ namespace MTProtoProxy
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Logging.Error(e.ToString());
                 Close();
             }
         }
@@ -275,7 +276,7 @@ namespace MTProtoProxy
             }
             catch(Exception e)
             {
-                Console.WriteLine(e);
+                Logging.Error(e.ToString());
                 Close();
             }
         }
