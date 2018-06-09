@@ -25,8 +25,8 @@ namespace MTProtoProxy
                 _fs = new FileStream(LogFilePath, FileMode.Append);
                 _sw = new StreamWriterWithTimestamp(_fs);
                 _sw.AutoFlush = true;
-                Console.SetOut(_sw);
-                Console.SetError(_sw);
+                //Console.SetOut(_sw);
+                //Console.SetError(_sw);
 
                 return true;
             }
@@ -41,7 +41,7 @@ namespace MTProtoProxy
         {
             try
             {
-                //Console.WriteLine(o);
+                Console.WriteLine(o);
                 _sw.WriteLine(o);
             }
             catch (ObjectDisposedException)
