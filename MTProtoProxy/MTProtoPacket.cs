@@ -191,7 +191,7 @@ namespace MTProtoProxy
         public void Dispose()
         {
             Dispose(true);
-            GC.SuppressFinalize(this);
+            //GC.SuppressFinalize(this);
         }
         protected virtual void Dispose(in bool isDisposing)
         {
@@ -209,7 +209,7 @@ namespace MTProtoProxy
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e);
+                    Logging.LogUsefulException(e);
                 }
             }
             if (_cryptoTransformEncrypt != null)
@@ -221,7 +221,7 @@ namespace MTProtoProxy
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e);
+                    Logging.LogUsefulException(e);
                 }
             }
         }

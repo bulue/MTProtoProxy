@@ -41,7 +41,8 @@ namespace MTProtoProxy
         {
             try
             {
-                Console.WriteLine(o);
+                //Console.WriteLine(o);
+                _sw.WriteLine(o);
             }
             catch (ObjectDisposedException)
             {

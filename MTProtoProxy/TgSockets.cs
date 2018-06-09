@@ -28,69 +28,6 @@ namespace MTProtoProxy
             return new IPEndPoint(ipAddress, Constants.TelegramPort);
         }
 
-        public static IAsyncResult AsyncGetSocket(in int dcId)
-        {
-            var ip1 = _ipServersConfig[dcId - 1];
-            var ipAddress = IPAddress.Parse(ip1);
-            var endPoint = new IPEndPoint(ipAddress, Constants.TelegramPort);
-            Socket socket = new Socket(endPoint.AddressFamily, SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
-            try
-            {
-                IAsyncResult ret = socket.BeginConnect(endPoint, (ar) =>
-                {
-
-                },socket);
-                return ret;
-            }
-            catch(SocketException e)
-            {
-                Console.WriteLine($"The server can not connect to the telegram server {ip1}");
-                Console.WriteLine(e);
-            }
-            return null;
-        }
-
-
-        public static Socket GetSocket(in int dcId)
-        {
-            Socket socket = null;
-            Console.WriteLine("这儿没有好方法来做这件事!");
-            var ip1 = _ipServersConfig[dcId - 1];
-            var ipAddress = IPAddress.Parse(ip1);
-            var endPoint = new IPEndPoint(ipAddress, Constants.TelegramPort);
-            socket = new Socket(endPoint.AddressFamily, SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
-            try
-            {
-                socket.Connect(endPoint);
-            }
-            catch (SocketException e)
-            {
-                if (e.SocketErrorCode == SocketError.TimedOut)
-                {
-                    ip1 = _ipServers[dcId - 1];
-                    ipAddress = IPAddress.Parse(ip1);
-                    endPoint = new IPEndPoint(ipAddress, Constants.TelegramPort);
-                    try
-                    {
-                        socket.Connect(endPoint);
-                    }
-                    catch (Exception ex)
-                    {
-                        socket = null;
-                        Console.WriteLine($"The server can not connect to the telegram server {ip1}");
-                        Console.WriteLine(ex);
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                socket = null;
-                Console.WriteLine($"The server can not connect to the telegram server {ip1}");
-                Console.WriteLine(e);
-            }
-            return socket;
-        }
-
         public static void Close()
         {
             Stop();

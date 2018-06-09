@@ -43,7 +43,7 @@ namespace MTProtoProxy
 
             if (_mtprotoPacketClientSocket.ProtocolType == ProtocolType.None)
             {
-                Console.WriteLine("Error in protocol");
+                Logging.Error("Error in protocol");
                 return;
             }
             var dcId = Math.Abs(BitConverter.ToInt16(buffer.SubArray(60, 2), 0));
@@ -51,13 +51,6 @@ namespace MTProtoProxy
             var endPoint = TgSockets.GetTgServerIp(dcId);
             _tgSocket = new Socket(endPoint.AddressFamily, SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
             _tgSocket.BeginConnect(endPoint, TgSocketConnectCallback, null);
-
-            //_tgSocket = TgSockets.GetSocket(dcId);
-            //_tgSocket = (Socket)xxx.AsyncState;
-            //_tgSocket.EndConnect(xxx);
-
-            //Console.WriteLine("原来这样真的可以的！！");
-
         }
 
 
@@ -73,7 +66,7 @@ namespace MTProtoProxy
             }
             catch(Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Logging.LogUsefulException(e);
                 Close();
             }
         }
@@ -94,7 +87,7 @@ namespace MTProtoProxy
                     {
                         StartClientSocketRecive();
                         StartTGSocketRecive();
-                        Console.WriteLine("handle shake with tg server is suceess!");
+                        Logging.Info("handle shake with tg server is suceess!");
                     }
                     else
                     {
@@ -105,7 +98,7 @@ namespace MTProtoProxy
                 else
                 {
                     _clientSocket.Shutdown(SocketShutdown.Send);
-                    Console.WriteLine("tg socket send first 64 bytes faild!");
+                    Logging.Info("tg socket send first 64 bytes faild!");
                 }
             }
             catch(Exception e)
@@ -149,8 +142,8 @@ namespace MTProtoProxy
             }
             catch(Exception e)
             {
+                Logging.LogUsefulException(e);
                 Close();
-                Logging.Error(e.ToString());
             }
         }
 
@@ -164,7 +157,7 @@ namespace MTProtoProxy
             }
             catch (Exception e)
             {
-                Logging.Error(e.ToString());
+                Logging.LogUsefulException(e);
                 Close();
             }
         }
@@ -181,7 +174,7 @@ namespace MTProtoProxy
                 int bytesRemaining = lenght - bytes;
                 if (bytesRemaining > 0)
                 {
-                    Console.WriteLine("reconstruct _remoteSendBuffer to re-send");
+                    Logging.Info("reconstruct _remoteSendBuffer to re-send");
                     Buffer.BlockCopy(buffer, bytes, buffer, 0, bytesRemaining);
                     AsyncSendToClientSocket(buffer, bytesRemaining);
                 }
@@ -192,7 +185,7 @@ namespace MTProtoProxy
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Logging.LogUsefulException(e);
                 Close();
             }
         }
@@ -207,7 +200,7 @@ namespace MTProtoProxy
             }
             catch(Exception e)
             {
-                Logging.Error(e.ToString());
+                Logging.LogUsefulException(e);
                 Close();
             }
         }
@@ -232,7 +225,7 @@ namespace MTProtoProxy
             }
             catch(Exception e)
             {
-                Logging.Error(e.ToString());
+                Logging.LogUsefulException(e);
                 Close();
             }
         }
@@ -246,7 +239,7 @@ namespace MTProtoProxy
             }
             catch (Exception e)
             {
-                Logging.Error(e.ToString());
+                Logging.LogUsefulException(e);
                 Close();
             }
         }
@@ -265,7 +258,7 @@ namespace MTProtoProxy
                 int bytesRemaining = length - sendBytes;
                 if (bytesRemaining > 0)
                 {
-                    Console.WriteLine("reconstruct _remoteSendBuffer to re-send");
+                    Logging.Info("reconstruct _remoteSendBuffer to re-send");
                     Buffer.BlockCopy(buffer, sendBytes, buffer, 0, bytesRemaining);
                     AsyncSendToTgSocket(buffer, bytesRemaining);
                 }
@@ -276,7 +269,7 @@ namespace MTProtoProxy
             }
             catch(Exception e)
             {
-                Logging.Error(e.ToString());
+                Logging.LogUsefulException(e);
                 Close();
             }
         }

@@ -11,7 +11,6 @@ namespace MTProtoProxy
     {
         public string Secret { get => _secret; }
         public int Port { get => _port; }
-        public bool IsClosed { get => _isDisposed; }
         private readonly string _secret;
         private readonly int _port;
         private readonly string _ip;
@@ -20,14 +19,12 @@ namespace MTProtoProxy
         private readonly object _lockListener = new object();
         private readonly object _lockConnection = new object();
         private readonly List<MTProtoSocket> _protoSockets = new List<MTProtoSocket>();
-        private volatile bool _isDisposed;
         public MTProtoProxyServer(in string secret, in int port, in string ip = "default")
         {
             _secret = secret;
             _port = port;
             _ip = ip;
-            Console.WriteLine("MTProtoProxy Server By Telegram @MTProtoProxy v1.0.5-alpha");
-            Console.WriteLine("open source => https://github.com/TGMTProto/MTProtoProxy");
+            Logging.Info(string.Format("{0}:{1}==>secret:{2}", ip, port, secret));
         }
         public void Start(in int backLog = 100)
         {
@@ -54,10 +51,9 @@ namespace MTProtoProxy
             }
             catch(Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Logging.LogUsefulException(e);
             }
         }
-
         public void Stop()
         {
             try
@@ -76,7 +72,6 @@ namespace MTProtoProxy
             {
             }
         }
-
 
         private void StartAsyncListen()
         {
@@ -98,7 +93,7 @@ namespace MTProtoProxy
             }
             catch(Exception e)
             {
-                Logging.Error(e.ToString());
+                Logging.LogUsefulException(e);
             }
         }
 
@@ -106,7 +101,7 @@ namespace MTProtoProxy
         {
             try
             {
-                Console.WriteLine("A new connection was created");
+                Logging.Info("A new connection was created");
                 var buffer = new byte[64];
                 socket.BeginReceive(buffer, 0, buffer.Length, 0, OnClientSocketRecive, new object[] {socket, buffer, 0});
             }
@@ -132,7 +127,7 @@ namespace MTProtoProxy
                 {
                     socket.Shutdown(SocketShutdown.Both);
                     socket.Close();
-                    Console.WriteLine("client is closed!!!!!!!" + " socket" + socket.GetHashCode());
+                    Logging.Info("client is closed!!!!!!!" + " socket" + socket.GetHashCode());
                     return;
                 }
                 recived_bytes += bytes;
@@ -140,63 +135,29 @@ namespace MTProtoProxy
                 {
                     var mtpSocket = new MTProtoSocket(socket);
                     mtpSocket.StartAsync(buffer, _secret);
-                    Console.WriteLine("start a new session!!");
+                    Logging.Info("start a new session!!");
                 }
                 else
                 {
-                    Console.WriteLine("not enough 64 bytes! just " + recived_bytes + " socket" + socket.GetHashCode() + "  " + buffer.Length);
+                    Logging.Info("not enough 64 bytes! just " + recived_bytes + " socket" + socket.GetHashCode() + "  " + buffer.Length);
                     socket.Shutdown(SocketShutdown.Both);
                     socket.Close();
-                    //socket.BeginReceive(buffer, recived_bytes, buffer.Length - recived_bytes, 0, OnClientSocketRecive, new object[] { socket, buffer, recived_bytes });
                 }
             }
             catch(Exception e)
             {
-                socket.Shutdown(SocketShutdown.Both);
-                socket.Close();
-                Logging.Error(e.ToString());
-            }
-        }
-        protected virtual void Dispose(in bool isDisposing)
-        {
-            lock (_lockListener)
-            {
+                Logging.LogUsefulException(e);
                 try
                 {
-                    if (_isDisposed)
-                    {
-                        return;
-                    }
-                    _isDisposed = true;
+                    socket.Shutdown(SocketShutdown.Both);
+                }
+                catch { }
 
-                    if (!isDisposing)
-                    {
-                        return;
-                    }
-                    //_socketListener.Stop();
-                    _listenSocket.Close();
-                }
-                catch (Exception e)
+                try
                 {
-                    Console.WriteLine(e);
+                    socket.Close();
                 }
-                lock (_lockConnection)
-                {
-                    foreach (var mtp in _protoSockets)
-                    {
-                        try
-                        {
-                            mtp.Close();
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine(e);
-                        }
-                    }
-                }
-                TgSockets.Close();
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
+                catch { }
             }
         }
     }
