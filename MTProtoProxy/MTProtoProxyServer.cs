@@ -16,7 +16,6 @@ namespace MTProtoProxy
         private readonly int _port;
         private readonly string _ip;
         private int _backLog;
-        //private SocketListener _socketListener;
         private Socket _listenSocket;
         private readonly object _lockListener = new object();
         private readonly object _lockConnection = new object();
@@ -32,9 +31,7 @@ namespace MTProtoProxy
         }
         public void Start(in int backLog = 100)
         {
-            ThrowIfDisposed();
             _backLog = backLog;
-            //_socketListener = new SocketListener();
             IPAddress ipAddress = null;
             if (_ip == "default")
             {
@@ -61,6 +58,25 @@ namespace MTProtoProxy
             }
         }
 
+        public void Stop()
+        {
+            try
+            {
+                _listenSocket.Shutdown(SocketShutdown.Both);
+            }
+            catch
+            {
+                
+            }
+            try
+            {
+                _listenSocket.Close();
+            }
+            catch
+            {
+            }
+        }
+
 
         private void StartAsyncListen()
         {
@@ -68,9 +84,16 @@ namespace MTProtoProxy
             {
                 _listenSocket.BeginAccept((ar) =>
                 {
-                    Socket newsocket = _listenSocket.EndAccept(ar);
-                    StartAsyncListen();
-                    SocketAccepted(newsocket);
+                    try
+                    {
+                        Socket newsocket = _listenSocket.EndAccept(ar);
+                        StartAsyncListen();
+                        SocketAccepted(newsocket);
+                    }
+                    catch(Exception e)
+                    {
+                        Logging.Error(e.ToString());
+                    }
                 }, null);
             }
             catch(Exception e)
@@ -121,11 +144,9 @@ namespace MTProtoProxy
                 }
                 else
                 {
-                    //socket.Shutdown(SocketShutdown.Both);
-                    //socket.Close();
+                    Console.WriteLine("not enough 64 bytes! just " + recived_bytes + " socket" + socket.GetHashCode() + "  " + buffer.Length);
                     socket.Shutdown(SocketShutdown.Both);
                     socket.Close();
-                    Console.WriteLine("not enough 64 bytes! just " + recived_bytes + " socket" + socket.GetHashCode() + "  " + buffer.Length);
                     //socket.BeginReceive(buffer, recived_bytes, buffer.Length - recived_bytes, 0, OnClientSocketRecive, new object[] { socket, buffer, recived_bytes });
                 }
             }
@@ -176,13 +197,6 @@ namespace MTProtoProxy
                 TgSockets.Close();
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
-            }
-        }
-        private void ThrowIfDisposed()
-        {
-            if (_isDisposed)
-            {
-                throw new ObjectDisposedException("Connection was disposed.");
             }
         }
     }
